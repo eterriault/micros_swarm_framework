@@ -76,22 +76,22 @@ namespace micros_swarm_framework{
                 rtp_->setRobotID(robot_id);
             }
             
-            Base getRobotBase()
+            const Base& getRobotBase()
             {
                 return rtp_->getRobotBase();
             }
             
-            void setRobotBase(Base robot_base)
+            void setRobotBase(const Base& robot_base)
             {
                 rtp_->setRobotBase(robot_base);
             }
             
-            double getNeighborDistance()
+            float getNeighborDistance()
             {
                 return rtp_->getNeighborDistance();
             }
             
-            void setNeighborDistance(double neighbor_distance)
+            void setNeighborDistance(float neighbor_distance)
             {
                 rtp_->setNeighborDistance(neighbor_distance);
             }

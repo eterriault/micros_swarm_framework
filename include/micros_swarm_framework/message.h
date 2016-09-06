@@ -52,7 +52,7 @@ namespace micros_swarm_framework{
     */
     enum MSFPPacketType
     {
-        SINGLE_ROBOT_BROADCAST_ID,  //broadcast id
+        SINGLE_ROBOT_BROADCAST_BASE,  //broadcast id
         
         SINGLE_ROBOT_JOIN_SWARM,  //robot join in a swarm
         SINGLE_ROBOT_LEAVE_SWARM,  //robot leave a swarm
@@ -69,7 +69,7 @@ namespace micros_swarm_framework{
         MSFP_PACKET_TYPE_COUNT  //MSFPPacket type count
     };
 
-    class SingleRobotBroadcastID{
+    class SingleRobotBroadcastBase{
         private:   
             int robot_id_;
             
@@ -95,8 +95,8 @@ namespace micros_swarm_framework{
                 ar & robot_vz_;
             }
         public:
-            SingleRobotBroadcastID(){}
-            SingleRobotBroadcastID(int robot_id, float robot_x ,float robot_y, float robot_z, float robot_vx ,float robot_vy, float robot_vz):\
+            SingleRobotBroadcastBase(){}
+            SingleRobotBroadcastBase(int robot_id, float robot_x ,float robot_y, float robot_z, float robot_vx ,float robot_vy, float robot_vz):\
                 robot_id_(robot_id), robot_x_(robot_x), robot_y_(robot_y), robot_z_(robot_z),  robot_vx_(robot_vx), robot_vy_(robot_vy), robot_vz_(robot_vz){}
                  
             int getRobotID(){return robot_id_;}
@@ -164,11 +164,11 @@ namespace micros_swarm_framework{
             }
         public:
             SingleRobotSwarmList(){}
-            SingleRobotSwarmList(int robot_id, std::vector<int> swarm_list):\
+            SingleRobotSwarmList(int robot_id, const std::vector<int>& swarm_list):\
                 robot_id_(robot_id), swarm_list_(swarm_list){}
                 
             int getRobotID(){return robot_id_;}
-            std::vector<int> getSwarmList(){return swarm_list_;}
+            const std::vector<int>& getSwarmList(){return swarm_list_;}
     };
     
     class VirtualStigmergyQuery
@@ -193,13 +193,13 @@ namespace micros_swarm_framework{
         public:
             VirtualStigmergyQuery(){}
 
-            VirtualStigmergyQuery(int id, std::string key, std::string value, time_t time_now, int robot_id):\
+            VirtualStigmergyQuery(int id, const std::string& key, const std::string& value, time_t time_now, int robot_id):\
                 virtual_stigmergy_id_(id), virtual_stigmergy_key_(key), virtual_stigmergy_value_(value),\
                 virtual_stigmergy_timestamp_(time_now), robot_id_(robot_id){}
                 
             int getVirtualStigmergyID(){return virtual_stigmergy_id_;}
-            std::string getVirtualStigmergyKey(){return virtual_stigmergy_key_;}
-            std::string getVirtualStigmergyValue(){return virtual_stigmergy_value_;}
+            const std::string& getVirtualStigmergyKey(){return virtual_stigmergy_key_;}
+            const std::string& getVirtualStigmergyValue(){return virtual_stigmergy_value_;}
             time_t getVirtualStigmergyTimestamp(){return virtual_stigmergy_timestamp_;}
             int getRobotID(){return robot_id_;}
     };
@@ -226,13 +226,13 @@ namespace micros_swarm_framework{
         public:
             VirtualStigmergyPut(){};
             
-             VirtualStigmergyPut(int id, std::string key, std::string value, time_t time_now, int robot_id):\
+             VirtualStigmergyPut(int id, const std::string& key, const std::string& value, time_t time_now, int robot_id):\
                 virtual_stigmergy_id_(id), virtual_stigmergy_key_(key), virtual_stigmergy_value_(value),\
                 virtual_stigmergy_timestamp_(time_now), robot_id_(robot_id){}
                 
             int getVirtualStigmergyID(){return virtual_stigmergy_id_;}
-            std::string getVirtualStigmergyKey(){return virtual_stigmergy_key_;}
-            std::string getVirtualStigmergyValue(){return virtual_stigmergy_value_;}
+            const std::string& getVirtualStigmergyKey(){return virtual_stigmergy_key_;}
+            const std::string& getVirtualStigmergyValue(){return virtual_stigmergy_value_;}
             time_t getVirtualStigmergyTimestamp(){return virtual_stigmergy_timestamp_;}
             int getRobotID(){return robot_id_;}
     };
@@ -251,10 +251,10 @@ namespace micros_swarm_framework{
             }
         public:
             NeighborBroadcastKeyValue(){}
-            NeighborBroadcastKeyValue(std::string key, std::string value): key_(key), value_(value){}
+            NeighborBroadcastKeyValue(const std::string& key, const std::string& value): key_(key), value_(value){}
             
-            std::string getKey(){return key_;}
-            std::string getValue(){return value_;}
+            const std::string& getKey(){return key_;}
+            const std::string& getValue(){return value_;}
     };
     
     class Barrier_Syn
@@ -270,8 +270,8 @@ namespace micros_swarm_framework{
             }
         public:
             Barrier_Syn(){};
-            Barrier_Syn(std::string s):s_(s){}
-            std::string getString(){return s_;}
+            Barrier_Syn(const std::string& s):s_(s){}
+            const std::string& getString(){return s_;}
     };
     
     class Barrier_Ack

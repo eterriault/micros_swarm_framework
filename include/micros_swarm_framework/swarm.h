@@ -75,10 +75,41 @@ namespace micros_swarm_framework{
                 rtp_->insertOrUpdateSwarm(swarm_id_, 0);
             }
             
-            std::set<int> getSwarmMembers()
+            Swarm(const Swarm& s)
             {
-                std::set<int> result=rtp_->getSwarmMembers(swarm_id_);
-                return result;
+                rtp_=Singleton<RuntimePlatform>::getSingleton();
+                #ifdef ROS
+                communicator_=Singleton<ROSCommunication>::getSingleton();
+                #endif
+                #ifdef OPENSPLICE_DDS
+                communicator_=Singleton<OpenSpliceDDSCommunication>::getSingleton();
+                #endif
+                swarm_id_=s.swarm_id_;
+            }
+            
+            Swarm& operator=(const Swarm& s)
+            {
+                if(this==&s)
+                    return *this;
+                rtp_=Singleton<RuntimePlatform>::getSingleton();
+                #ifdef ROS
+                communicator_=Singleton<ROSCommunication>::getSingleton();
+                #endif
+                #ifdef OPENSPLICE_DDS
+                communicator_=Singleton<OpenSpliceDDSCommunication>::getSingleton();
+                #endif
+                swarm_id_=s.swarm_id_;
+                return *this;
+            }
+            
+            ~Swarm()
+            {
+            
+            }
+            
+            void getSwarmMembers(std::set<int>& s)  const
+            {
+                rtp_->getSwarmMembers(swarm_id_, s);
             }
             
             void joinSwarm()
@@ -135,7 +166,7 @@ namespace micros_swarm_framework{
                 communicator_->broadcast(p);
             }
             
-            void selectSwarm(boost::function<bool()> bf)
+            void selectSwarm(const boost::function<bool()>& bf)
             {
                 if(bf())
                 {
@@ -147,7 +178,7 @@ namespace micros_swarm_framework{
                 }
             }
             
-            void unselectSwarm(boost::function<bool()> bf)
+            void unselectSwarm(const boost::function<bool()>& bf)
             {
                 if(bf())
                 {
@@ -159,15 +190,15 @@ namespace micros_swarm_framework{
                 }
             }
             
-            bool inSwarm()
+            bool inSwarm() const
             {
-                if(rtp_->getSwarm(swarm_id_))
+                if(rtp_->getSwarmFlag(swarm_id_))
                     return true;
                 return false;
             }
             
             //execute a function
-            void execute(boost::function<void()> f)
+            void execute(const boost::function<void()>& f)
             {
                 if(inSwarm())
                     f();
@@ -178,15 +209,17 @@ namespace micros_swarm_framework{
                 if(inSwarm())
                     leaveSwarm();
                 rtp_->deleteSwarm(swarm_id_);
-                    this->~Swarm();
+                this->~Swarm();
             }
             
-            Swarm intersectionSwarm(Swarm s, int new_swarm_id)
+            Swarm intersectionSwarm(const Swarm& s, int new_swarm_id)
             {
                 std::set<int> result;
         
-                std::set<int> a = getSwarmMembers();
-                std::set<int> b = s.getSwarmMembers();
+                std::set<int> a;
+                getSwarmMembers(a);
+                std::set<int> b;
+                s.getSwarmMembers(b);
         
                 std::set_intersection(a.begin(), a.end(), b.begin(), b.end(),
                 std::insert_iterator<std::set<int> >(result, result.begin()));
@@ -202,17 +235,17 @@ namespace micros_swarm_framework{
                     result_swarm.joinSwarm();
                 }
         
-                //ros::Duration(0.1).sleep();
-        
                 return result_swarm;
             }
             
-            Swarm unionSwarm(Swarm s, int new_swarm_id)
+            Swarm unionSwarm(const Swarm& s, int new_swarm_id)
             {
                 std::set<int> result;
         
-                std::set<int> a = getSwarmMembers();
-                std::set<int> b = s.getSwarmMembers();
+                std::set<int> a;
+                getSwarmMembers(a);
+                std::set<int> b;
+                s.getSwarmMembers(b);
         
                 std::set_union(a.begin(), a.end(), b.begin(), b.end(),
                 std::insert_iterator<std::set<int> >(result, result.begin()));
@@ -228,17 +261,17 @@ namespace micros_swarm_framework{
                     result_swarm.joinSwarm();
                 }
         
-                //ros::Duration(0.1).sleep();
-        
                 return result_swarm;
             }
             
-            Swarm differenceSwarm(Swarm s, int new_swarm_id)
+            Swarm differenceSwarm(const Swarm& s, int new_swarm_id)
             {
                 std::set<int> result;
         
-                std::set<int> a = getSwarmMembers();
-                std::set<int> b = s.getSwarmMembers();
+                std::set<int> a;
+                getSwarmMembers(a);
+                std::set<int> b;
+                s.getSwarmMembers(b);
         
                 std::set_difference(a.begin(), a.end(), b.begin(), b.end(),
                 std::insert_iterator<std::set<int> >(result, result.begin()));
@@ -254,32 +287,30 @@ namespace micros_swarm_framework{
                     result_swarm.joinSwarm();
                 }
         
-                //ros::Duration(0.1).sleep();
-        
                 return result_swarm;
             }
             
             Swarm negationSwarm(int new_swarm_id)
             {
                 Swarm result_swarm(new_swarm_id);
-        
+                std::set<int> a;
+                getSwarmMembers(a);
                 int robot_id=rtp_->getRobotID();
     
                 std::set<int>::iterator it;  
-                it = getSwarmMembers().find(robot_id);
-                if(it == getSwarmMembers().end())
+                it = a.find(robot_id);
+                if(it == a.end())
                 {
                     result_swarm.joinSwarm();
                 }
-        
-                //ros::Duration(0.1).sleep();
         
                 return result_swarm;
             }
             
             void printSwarm()
             {
-                std::set<int> s = getSwarmMembers();
+                std::set<int> s;
+                getSwarmMembers(s);
         
                 int robot_id=rtp_->getRobotID();
     

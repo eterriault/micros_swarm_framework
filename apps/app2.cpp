@@ -120,8 +120,6 @@ namespace micros_swarm_framework{
         boost::function<XY(NeighborBase, XY &)> bf_nonkin=boost::bind(&App2::force_sum_nonkin, this, _1, _2);
         sum=n.neighborsKin(RED_SWARM).neighborsReduce(bf_kin, sum);
         sum=n.neighborsNonKin(RED_SWARM).neighborsReduce(bf_nonkin, sum);
-        //micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> tmp1=n.neighborsKin(RED_SWARM);
-        //micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> tmp2=n.neighborsNonKin(RED_SWARM);
     
         return sum;
     }
@@ -137,8 +135,6 @@ namespace micros_swarm_framework{
         boost::function<XY(NeighborBase, XY &)> bf_nonkin=boost::bind(&App2::force_sum_nonkin, this, _1, _2);
         sum=n.neighborsKin(BLUE_SWARM).neighborsReduce(bf_kin, sum);
         sum=n.neighborsNonKin(BLUE_SWARM).neighborsReduce(bf_nonkin, sum);
-        //micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> tmp1=n.neighborsKin(BLUE_SWARM);
-        //micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> tmp2=n.neighborsNonKin(BLUE_SWARM);
     
         return sum;
     }
@@ -159,26 +155,22 @@ namespace micros_swarm_framework{
     
     void App2::publish_red_cmd(const ros::TimerEvent&)
     {
-        
         XY v=direction_red();
         geometry_msgs::Twist t;
         t.linear.x=v.x;
         t.linear.y=v.y;
         
         pub_.publish(t);
-        
     }
     
     void App2::publish_blue_cmd(const ros::TimerEvent&)
     {
-        
         XY v=direction_blue();
         geometry_msgs::Twist t;
         t.linear.x=v.x;
         t.linear.y=v.y;
         
         pub_.publish(t);
-        
     }
 
     void App2::motion_red()
@@ -208,6 +200,7 @@ namespace micros_swarm_framework{
         init();
     
         sub_ = nh_.subscribe("base_pose_ground_truth", 1000, &App2::baseCallback, this, ros::TransportHints().udp());
+        ros::Duration(5).sleep(); 
         pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
         
         boost::function<bool()> bfred=boost::bind(&App2::red, this, getRobotID());
@@ -223,12 +216,5 @@ namespace micros_swarm_framework{
         
         red_swarm.printSwarm();
         blue_swarm.printSwarm();
-        
-        /*
-        //test virtual stigmergy
-        micros_swarm_framework::VirtualStigmergy<bool> barrier(1);
-        std::string robot_id_string=boost::lexical_cast<std::string>(rtp_->getRobotID());
-        barrier.virtualStigmergyPut(robot_id_string, 1);
-        */
     }
 };

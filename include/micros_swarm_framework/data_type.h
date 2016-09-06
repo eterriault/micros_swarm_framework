@@ -61,7 +61,7 @@ namespace micros_swarm_framework{
             float vy_;
             float vz_;
         public:
-            Base() : x_(-1),y_(-1),z_(-1),vx_(-1),vy_(-1),vz_(-1){}
+            Base() : x_(0),y_(0),z_(0),vx_(0),vy_(0),vz_(0){}
             Base(float x,float y,float z,float vx,float vy,float vz) : x_(x),y_(y),z_(z),vx_(vx),vy_(vy),vz_(vz){}
             float getX(){return x_;}
             void setX(float x){x_=x;}
@@ -137,7 +137,7 @@ namespace micros_swarm_framework{
             //when age_ is larger than the threshold, remove the tuple of the map 
             int age_;
         public:
-            NeighborSwarmTuple(std::vector<int> swarm_id_vector, int age):swarm_id_vector_(swarm_id_vector), age_(age){}
+            NeighborSwarmTuple(const std::vector<int>& swarm_id_vector, int age):swarm_id_vector_(swarm_id_vector), age_(age){}
             ~NeighborSwarmTuple(){}
     
         void addSwarmID(int swarm_id)
@@ -150,7 +150,7 @@ namespace micros_swarm_framework{
             swarm_id_vector_.erase(std::remove(swarm_id_vector_.begin(), swarm_id_vector_.end(), swarm_id), swarm_id_vector_.end());
         }
     
-        std::vector<int> getSwarmIDVector()
+        const std::vector<int>& getSwarmIDVector()
         {
             return swarm_id_vector_;
         }
@@ -191,11 +191,14 @@ namespace micros_swarm_framework{
             //the id of the robot which last change the virtual stigmergy
             int robot_id_;
         public:
-            VirtualStigmergyTuple( std::string value, time_t time, int id)\
+            VirtualStigmergyTuple()\
+              :vstig_value_(""), vstig_timestamp_(0), robot_id_(-1){}
+            
+            VirtualStigmergyTuple(const std::string& value, time_t time, int id)\
               :vstig_value_(value), vstig_timestamp_(time), robot_id_(id){}
 
-            std::string getVirtualStigmergyValue(){return vstig_value_;}
-            void setVirtualStigmergyValue(std::string value)
+            const std::string& getVirtualStigmergyValue(){return vstig_value_;}
+            void setVirtualStigmergyValue(const std::string& value)
             {
                 vstig_value_=value;
             }

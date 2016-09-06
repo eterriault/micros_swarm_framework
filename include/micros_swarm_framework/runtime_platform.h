@@ -56,16 +56,19 @@ namespace micros_swarm_framework{
     class  RuntimePlatform{
         private:
             int robot_id_;
-            int robot_type_;
-            int robot_status_;
+            int robot_type_;  //TODO
+            int robot_status_;  //TODO
             Base robot_base_;
             std::map<int, NeighborBase> neighbors_;
             std::map<int, bool> swarms_;
             std::map<int, NeighborSwarmTuple> neighbor_swarms_;
             std::map<int, std::map<std::string, VirtualStigmergyTuple> > virtual_stigmergy_;
-            double neighbor_distance_;
+            float neighbor_distance_;
             std::set<int> barrier_;
             std::map<std::string, boost::function<void(const std::string&)> > callback_functions_;
+            boost::shared_mutex mutex1_, mutex2_, mutex3_, mutex4_, mutex5_,
+                                mutex6_, mutex7_, mutex8_, mutex9_, mutex10_,
+                                mutex11_;
         public:
             RuntimePlatform();
             RuntimePlatform(int robot_id);
@@ -73,11 +76,17 @@ namespace micros_swarm_framework{
             int getRobotID();
             void setRobotID(int robot_id);
             
-            Base getRobotBase();
-            void setRobotBase(Base robot_base);
+            int getRobotType();
+            void setRobotType(int robot_type);
+            
+            int getRobotStatus();
+            void setRobotStatus(int robot_status);
+            
+            const Base& getRobotBase();
+            void setRobotBase(const Base& robot_base);
             void printRobotBase();
             
-            std::map<int, NeighborBase> getNeighbors();
+            void getNeighbors(std::map<int, NeighborBase>& neighbors);
             void insertOrUpdateNeighbor(int robot_id, float distance, float azimuth, float elevation, float x, float y, float z, float vx, float vy, float vz);
             //delete an neighbor robot according to id
             void deleteNeighbor(int robot_id);
@@ -86,9 +95,9 @@ namespace micros_swarm_framework{
             
             void insertOrUpdateSwarm(int swarm_id, bool value);
             //check if the local robot is in a swarm 
-            bool getSwarm(int swarm_id);
+            bool getSwarmFlag(int swarm_id);
             //get the swarm list of the local robot
-            std::vector<int> getSwarmList();
+            void getSwarmList(std::vector<int>& swarm_list);
             void deleteSwarm(int swarm_id);
             void printSwarm();
             
@@ -96,30 +105,30 @@ namespace micros_swarm_framework{
             bool inNeighborSwarm(int robot_id, int swarm_id);
             void joinNeighborSwarm(int robot_id, int swarm_id);
             void leaveNeighborSwarm(int robot_id, int swarm_id);
-            void insertOrRefreshNeighborSwarm(int robot_id, std::vector<int> swarm_list);
+            void insertOrRefreshNeighborSwarm(int robot_id, const std::vector<int>& swarm_list);
             //get the member robot set of a swarm 
-            std::set<int> getSwarmMembers(int swarm_id);
+            void getSwarmMembers(int swarm_id, std::set<int>& swarm_members);
             void deleteNeighborSwarm(int robot_id);
             void printNeighborSwarm();
             
             void createVirtualStigmergy(int id);
-            void insertOrUpdateVirtualStigmergy(int id, std::string key, std::string value, time_t time_now, int robot_id);
-            VirtualStigmergyTuple getVirtualStigmergyTuple(int id, std::string key);
+            void insertOrUpdateVirtualStigmergy(int id, const std::string& key, const std::string& value, time_t time_now, int robot_id);
+            void getVirtualStigmergyTuple(int id, const std::string& key, VirtualStigmergyTuple& vstig_tuple);
             int getVirtualStigmergySize(int id);
             void deleteVirtualStigmergy(int id);
-            void deleteVirtualStigmergyValue(int id, std::string key);
+            void deleteVirtualStigmergyValue(int id, const std::string& key);
             void printVirtualStigmergy();
             
-            double getNeighborDistance();
-            void setNeighborDistance(double neighbor_distance);
+            float getNeighborDistance();
+            void setNeighborDistance(float neighbor_distance);
             
             void insertBarrier(int robot_id);
             int getBarrierSize();
             
-            void insertOrUpdateCallbackFunctions(std::string key, boost::function<void(const std::string&)> cb);
+            void insertOrUpdateCallbackFunctions(std::string key, const boost::function<void(const std::string&)>& cb);
             void doNothing(const std::string& value_str);
-            boost::function<void(const std::string&)> getCallbackFunctions(std::string key);
-            void deleteCallbackFunctions(std::string key);
+            const boost::function<void(const std::string&)>& getCallbackFunctions(const std::string& key);
+            void deleteCallbackFunctions(const std::string& key);
     };
 };
 

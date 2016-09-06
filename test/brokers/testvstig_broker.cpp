@@ -1,6 +1,6 @@
 /**
 Software License Agreement (BSD)
-\file      check_neighbor.h
+\file      testvstig_broker.cpp 
 \authors Xuefeng Chang <changxuefengcn@163.com>
 \copyright Copyright (c) 2016, the micROS Team, HPCL (National University of Defense Technology), All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that
@@ -20,67 +20,38 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCL
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef CHECK_NEIGHBOR_H_
-#define CHECK_NEIGHBOR_H_
-
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <time.h>
-#include <stdlib.h>
-#include <vector>
-#include <stack>
-#include <map>
-#include <set>
-#include <queue>
-#include <algorithm>
-
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/variant.hpp>
-#include <boost/function.hpp>
-#include <boost/foreach.hpp>
-
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/serialization/string.hpp> 
-#include <boost/serialization/vector.hpp> 
-
-#include "ros/ros.h"
+#include "apps/testvstig.h"
 
 namespace micros_swarm_framework{
     
-    class CheckNeighborInterface{
+    class TestVstigBroker : public nodelet::Nodelet
+    {
         public:
-            virtual bool isNeighbor(Base self, Base neighbor)=0;
+            ros::NodeHandle nh_;
+            boost::shared_ptr<Application> app_;
+                     
+            TestVstigBroker();
+            ~TestVstigBroker();
+            virtual void onInit();
     };
+
+    TestVstigBroker::TestVstigBroker()
+    {
     
-    class CheckNeighbor : public CheckNeighborInterface{
-        private:
-            float neighbor_distance_;
+    }
     
-        public:
-            CheckNeighbor(float neighbor_distance)
-            {
-                neighbor_distance_ = neighbor_distance;
-            }
+    TestVstigBroker::~TestVstigBroker()
+    {
         
-            float getNeighborDistance()
-            {
-                return neighbor_distance_;
-            }
-        
-            bool isNeighbor(Base self, Base neighbor)  //TODO
-            {
-                float distance=sqrt((self.getX()-neighbor.getX())*(self.getX()-neighbor.getX())+(self.getY()-neighbor.getY())*(self.getY()-neighbor.getY())+ \
-                    (self.getZ()-neighbor.getZ())*(self.getZ()-neighbor.getZ()));
-                    
-                if(distance<neighbor_distance_)
-                    return true;
-                    
-                return false;
-            }
-    };
+    }
+    
+    void TestVstigBroker::onInit()
+    {
+        nh_ = getNodeHandle();
+        app_.reset(new TestVstig(nh_));
+        app_->start();
+    }
 };
 
-#endif
+// Register the nodelet
+PLUGINLIB_EXPORT_CLASS(micros_swarm_framework::TestVstigBroker, nodelet::Nodelet)
