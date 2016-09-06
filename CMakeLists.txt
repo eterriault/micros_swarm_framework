@@ -28,7 +28,7 @@ elseif (${USE_OPENSPLICE_DDS})
   set(DDS_LIBRARY_DIRS $ENV{OSPL_HOME}/lib)
   add_definitions(-DOPENSPLICE_DDS)
 elseif (${USE_OPENDDS})
-  if (NOT DEFINED ENV{DDS_ROOT}) 
+  if (NOT DEFINED ENV{DDS_ROOT})
     message(FATAL_ERROR "OpenDDS environment variable DDS_ROOT is not defined")
   endif()
   if (NOT EXISTS $ENV{DDS_ROOT})
@@ -62,9 +62,9 @@ find_package(Boost REQUIRED COMPONENTS
   regex
   serialization
 )
-    
+
 include_directories(
-  include 
+  include
   ${Boost_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   ${DDS_INCLUDE_DIRS}
@@ -126,7 +126,7 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-    std_msgs 
+    std_msgs
     nav_msgs
     geometry_msgs
 )
@@ -163,7 +163,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES micros_swarm_framework
-  CATKIN_DEPENDS roscpp rospy std_msgs nav_msgs geometry_msgs message_runtime 
+  CATKIN_DEPENDS roscpp rospy std_msgs nav_msgs geometry_msgs message_runtime
   DEPENDS system_lib
 )
 
@@ -179,7 +179,7 @@ catkin_package(
 #)
 
 link_directories(
-  ${catkin_LIBRARY_DIRS} 
+  ${catkin_LIBRARY_DIRS}
   ${DDS_LIBRARY_DIRS}
   ${Boost_THREAD_LIBRARY}
   ${Boost_REGEX_LIBRARY}
@@ -189,9 +189,9 @@ link_directories(
 ## Declare a C++ library
 if (${USE_OPENSPLICE_DDS})
   add_library(opensplice_dds_pub_sub
-    src/opensplice_dds/MSFPPacket.cpp 
-    src/opensplice_dds/MSFPPacketDcps.cpp 
-    src/opensplice_dds/MSFPPacketDcps_impl.cpp 
+    src/opensplice_dds/MSFPPacket.cpp
+    src/opensplice_dds/MSFPPacketDcps.cpp
+    src/opensplice_dds/MSFPPacketDcps_impl.cpp
     src/opensplice_dds/MSFPPacketSplDcps.cpp
     src/opensplice_dds/check_status.cpp
     src/opensplice_dds/MSFPPacket_listener.cpp
@@ -257,6 +257,20 @@ add_dependencies(micros_swarm_framework_App3Broker ${micros_swarm_framework_EXPO
 
 if (${USE_OPENSPLICE_DDS})
   target_link_libraries(micros_swarm_framework_App3Broker
+    opensplice_dds_pub_sub
+    libddskernel.so
+    libdcpsisocpp.so
+  )
+endif()
+
+add_library(micros_swarm_framework_AppTestBroker
+  apps/app-test.cpp
+  apps/brokers/app-test_broker.cpp
+)
+add_dependencies(micros_swarm_framework_AppTestBroker ${micros_swarm_framework_EXPORTED_TARGETS})
+
+if (${USE_OPENSPLICE_DDS})
+  target_link_libraries(micros_swarm_framework_AppTestBroker
     opensplice_dds_pub_sub
     libddskernel.so
     libdcpsisocpp.so
