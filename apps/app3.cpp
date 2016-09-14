@@ -1,6 +1,6 @@
 /**
 Software License Agreement (BSD)
-\file      app3.cpp 
+\file      app3.cpp
 \authors Xuefeng Chang <changxuefengcn@163.com>
 \copyright Copyright (c) 2016, the micROS Team, HPCL (National University of Defense Technology), All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that
@@ -42,11 +42,11 @@ class NeighborHandle
     public:
     double _px,_py,_vx,_vy;
     pair<double,double> _position,_velocity;
-    int _r_id; 
+    int _r_id;
     double mypm_g;
     NeighborHandle(int r_id, float x, float y, float vx, float vy)
     {
-        
+
         _px=x;
         _py=y;
         _vx=vx;
@@ -163,24 +163,23 @@ namespace micros_swarm_framework{
     App3::App3(ros::NodeHandle nh):Application(nh)
     {
     }
-    
+
     App3::~App3()
     {
     }
-    
+
     void App3::init()
     {
         //set parameters
         hz=10;
         interval=1.0/hz;
     }
-    
+
     void App3::publish_cmd(const ros::TimerEvent&)
     {
-        geometry_msgs:: Twist msg;
         micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> n(true);
 
-        typename std::map<int, micros_swarm_framework::NeighborBase>::iterator it; 
+        typename std::map<int, micros_swarm_framework::NeighborBase>::iterator it;
         for(it=n.getData().begin();it!=n.getData().end();it++)
         {
             NeighborHandle* nh=new NeighborHandle(it->first, it->second.getX(), it->second.getY(), it->second.getVX(), it->second.getVY());
@@ -191,46 +190,69 @@ namespace micros_swarm_framework{
 
         my_position=pair<double,double>(nl.getX(), nl.getY());
         my_velocity=pair<double,double>(nl.getVX(), nl.getVY());
-      
-        msg.linear.x += (f_g().first*pm1+f_d().first*pm2+f_r().first*pm3)/hz;
-        msg.linear.y += (f_g().second*pm1+f_d().second*pm2+f_r().second*pm3)/hz;
+
+        geometry_msgs::Vector3 linearVel;
+
+        linearVel.x += (f_g().first*pm1+f_d().first*pm2+f_r().first*pm3)/hz;
+        linearVel.y += (f_g().second*pm1+f_d().second*pm2+f_r().second*pm3)/hz;
         //cout<<f_g().second<<' '<<f_d().second<<' '<<msg.linear.y<<endl;
-      
-        if (msg.linear.x >1)
-            msg.linear.x=1;
-        if (msg.linear.x <-1)
-            msg.linear.x=-1;
-        if (msg.linear.y >1)
-            msg.linear.y=1;
-        if (msg.linear.y <-1)
-            msg.linear.y=-1;
-        pub_.publish(msg);
-      
-        neighbor_list.clear();  
+
+        if (linearVel.x >1)
+            linearVel.x=1;
+        if (linearVel.x <-1)
+            linearVel.x=-1;
+        if (linearVel.y >1)
+            linearVel.y=1;
+        if (linearVel.y <-1)
+            linearVel.y=-1;
+
+        trajectory_msgs::MultiDOFJointTrajectory trajectory_msg;
+        trajectory_msg.header.stamp = ros::Time::now();
+
+
+        mav_msgs::EigenTrajectoryPoint trajectory_point;
+
+          micros_swarm_framework::Base l = getRobotBase();
+
+          trajectory_point.position_W.x() = l.getX();
+          trajectory_point.position_W.y() = l.getY();
+          trajectory_point.position_W.z() = 1.0;
+
+          trajectory_point.velocity_W.x() = linearVel.x;
+          trajectory_point.velocity_W.y() = linearVel.y;
+          trajectory_point.velocity_W.z() = linearVel.z;
+
+          mav_msgs::msgMultiDofJointTrajectoryFromEigen(trajectory_point, &trajectory_msg);
+
+          std::cout << "publishing " << linearVel.x << ", " << linearVel.y << ", " << linearVel.z << ", " << std::endl;
+
+        pub_.publish(trajectory_msg);
+
+        neighbor_list.clear();
     }
-    
+
     void App3::baseCallback(const nav_msgs::Odometry& lmsg)
     {
         float x=lmsg.pose.pose.position.x;
         float y=lmsg.pose.pose.position.y;
-    
+
         float vx=lmsg.twist.twist.linear.x;
         float vy=lmsg.twist.twist.linear.y;
-    
+
         micros_swarm_framework::Base l(x, y, 0, vx, vy, 0);
         setRobotBase(l);
     }
-    
+
     void App3::start()
     {
         init();
-        
-        setNeighborDistance(12);
-        sub_ = nh_.subscribe("base_pose_ground_truth", 1000, &App3::baseCallback, this, ros::TransportHints().udp());
+
+        setNeighborDistance(100);
+        sub_ = nh_.subscribe("ground_truth/odometry", 1000, &App3::baseCallback, this, ros::TransportHints().udp());
         ros::Duration(5).sleep();
-        pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
-        
+        //pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+        pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>("command/trajectory", 1000);
+
         timer_ = nh_.createTimer(ros::Duration(interval), &App3::publish_cmd, this);
     }
 };
-

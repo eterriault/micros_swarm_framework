@@ -48,10 +48,16 @@ namespace micros_swarm_framework{
 	void AppTest::publish_cmd(const ros::TimerEvent&)
 	{
 		XY v=direction();
-		std_msgs::Float32 t;
-		t.data = v.x;
+		trajectory_msgs::MultiDOFJointTrajectory trajectory_msg;
+		trajectory_msg.header.stamp = ros::Time::now();
 
-		pub_.publish(t);
+		mav_msgs::EigenTrajectoryPoint trajectory_point;
+		trajectory_point.velocity_W.x() = v.x;
+		trajectory_point.velocity_W.y() = v.y;
+
+		mav_msgs::msgMultiDofJointTrajectoryFromEigen(trajectory_point, &trajectory_msg);
+
+		pub_.publish(trajectory_msg);
 	}
 
 	void AppTest::motion()
@@ -75,8 +81,8 @@ namespace micros_swarm_framework{
 	 {
 	    init();
 
-	    sub_ = nh_.subscribe("base_pose_ground_truth", 1000, &AppTest::baseCallback, this, ros::TransportHints().udp());
-	    pub_ = nh_.advertise<std_msgs::Float32>("cmd_vel", 1000);
+	    sub_ = nh_.subscribe("ground_truth/odometry", 1000, &AppTest::baseCallback, this, ros::TransportHints().udp());
+			pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>("command/trajectory", 1000);
 
 	    motion();
 	}

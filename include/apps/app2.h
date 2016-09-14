@@ -26,13 +26,16 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #include "std_msgs/String.h"
 #include "nav_msgs/Odometry.h"
 #include "geometry_msgs/Twist.h"
+#include "trajectory_msgs/MultiDOFJointTrajectory.h"
+
+#include "mav_msgs/conversions.h"
 
 #include "micros_swarm_framework/micros_swarm_framework.h"
 
 namespace micros_swarm_framework{
-    
+
     struct XY;
-    
+
     class App2 : public Application
     {
         public:
@@ -40,17 +43,17 @@ namespace micros_swarm_framework{
             ros::Timer blue_timer_;
             ros::Publisher pub_;
             ros::Subscriber sub_;
-            
+
             //app parameters
             int delta_kin;
             int epsilon_kin;
             int delta_nonkin;
             int epsilon_nonkin;
-            
+
             App2(ros::NodeHandle nh);
             ~App2();
             virtual void start();
-            
+
             //app functions
             void init();
             float force_mag_kin(float dist);
@@ -65,7 +68,7 @@ namespace micros_swarm_framework{
             void motion_blue();
             void publish_red_cmd(const ros::TimerEvent&);
             void publish_blue_cmd(const ros::TimerEvent&);
-            void baseCallback(const nav_msgs::Odometry& lmsg);  
+            void baseCallback(const nav_msgs::Odometry& lmsg);
     };
 };
 

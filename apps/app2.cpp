@@ -1,6 +1,6 @@
 /**
 Software License Agreement (BSD)
-\file      app2.cpp 
+\file      app2.cpp
 \authors Xuefeng Chang <changxuefengcn@163.com>
 \copyright Copyright (c) 2016, the micROS Team, HPCL (National University of Defense Technology), All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that
@@ -23,7 +23,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #include "apps/app2.h"
 
 #define BARRIER_VSTIG  1
-#define ROBOT_SUM 20
+#define ROBOT_SUM 4
 
 #define RED_SWARM 1
 #define BLUE_SWARM 2
@@ -38,23 +38,23 @@ namespace micros_swarm_framework{
 
     App2::App2(ros::NodeHandle nh):Application(nh)
     {
-        
+
     }
-    
+
     App2::~App2()
     {
     }
-    
+
     void App2::init()
     {
         //set parameters
-        delta_kin = 5;
-        epsilon_kin = 100;
+        delta_kin = 0.5;
+        epsilon_kin = 10;
 
-        delta_nonkin = 30;
-        epsilon_nonkin = 1000;
+        delta_nonkin = 3;
+        epsilon_nonkin = 100;
     }
-    
+
     float App2::force_mag_kin(float dist)
     {
         return -(epsilon_kin/(dist+0.1)) *(pow(delta_kin/(dist+0.1), 4) - pow(delta_kin/(dist+0.1), 2));
@@ -70,18 +70,18 @@ namespace micros_swarm_framework{
         micros_swarm_framework::Base l=getRobotBase();
         float xl=l.getX();
         float yl=l.getY();
-    
+
         float xn=n.getX();
         float yn=n.getY();
-    
+
         float dist=sqrt(pow((xl-xn),2)+pow((yl-yn),2));
-    
+
         float fm = force_mag_kin(dist)/1000;
         if(fm>0.5) fm=0.5;
-    
+
         float fx=(fm/(dist+0.1))*(xn-xl);
         float fy=(fm/(dist+0.1))*(yn-yl);
-    
+
         s.x+=fx;
         s.y+=fy;
         return s;
@@ -92,18 +92,18 @@ namespace micros_swarm_framework{
         micros_swarm_framework::Base l=getRobotBase();
         float xl=l.getX();
         float yl=l.getY();
-    
+
         float xn=n.getX();
         float yn=n.getY();
-    
+
         float dist=sqrt(pow((xl-xn),2)+pow((yl-yn),2));
-    
+
         float fm = force_mag_nonkin(dist)/1000;
         if(fm>0.5) fm=0.5;
-    
+
         float fx=(fm/(dist+0.1))*(xn-xl);
         float fy=(fm/(dist+0.1))*(yn-yl);
-    
+
         s.x+=fx;
         s.y+=fy;
         return s;
@@ -114,13 +114,16 @@ namespace micros_swarm_framework{
         XY sum;
         sum.x=0;
         sum.y=0;
-    
+
         micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> n(true);
+
         boost::function<XY(NeighborBase, XY &)> bf_kin=boost::bind(&App2::force_sum_kin, this, _1, _2);
         boost::function<XY(NeighborBase, XY &)> bf_nonkin=boost::bind(&App2::force_sum_nonkin, this, _1, _2);
+
         sum=n.neighborsKin(RED_SWARM).neighborsReduce(bf_kin, sum);
         sum=n.neighborsNonKin(RED_SWARM).neighborsReduce(bf_nonkin, sum);
-    
+
+
         return sum;
     }
 
@@ -129,48 +132,83 @@ namespace micros_swarm_framework{
         XY sum;
         sum.x=0;
         sum.y=0;
-    
+
         micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> n(true);
         boost::function<XY(NeighborBase, XY &)> bf_kin=boost::bind(&App2::force_sum_kin, this, _1, _2);
         boost::function<XY(NeighborBase, XY &)> bf_nonkin=boost::bind(&App2::force_sum_nonkin, this, _1, _2);
         sum=n.neighborsKin(BLUE_SWARM).neighborsReduce(bf_kin, sum);
         sum=n.neighborsNonKin(BLUE_SWARM).neighborsReduce(bf_nonkin, sum);
-    
+
+
         return sum;
     }
 
     bool App2::red(int id)
     {
-        if(id<=9)
+        if(id%2==0)
             return true;
         return false;
     }
 
     bool App2::blue(int id)
     {
-        if(id>=10)
+        if(id%2!=0)
             return true;
         return false;
     }
-    
+
     void App2::publish_red_cmd(const ros::TimerEvent&)
     {
         XY v=direction_red();
-        geometry_msgs::Twist t;
-        t.linear.x=v.x;
-        t.linear.y=v.y;
-        
-        pub_.publish(t);
+        trajectory_msgs::MultiDOFJointTrajectory trajectory_msg;
+        trajectory_msg.header.stamp = ros::Time::now();
+
+        mav_msgs::EigenTrajectoryPoint trajectory_point;
+
+        micros_swarm_framework::Base l = getRobotBase();
+
+        trajectory_point.position_W.x() = l.getX();
+        trajectory_point.position_W.y() = l.getY();
+        trajectory_point.position_W.z() = 1.0;
+
+
+//std::cout << "current position for robot " << getRobotID() << l.getX() << l.getY() << std::endl;
+
+         trajectory_point.velocity_W.x() = v.x;
+         trajectory_point.velocity_W.y() = v.y;
+          //trajectory_point.velocity_W.y() = 0.5;
+
+        mav_msgs::msgMultiDofJointTrajectoryFromEigen(trajectory_point, &trajectory_msg);
+
+        //std::cout << "red sending command: " << v.x << ", " << v.y << std::endl;
+
+
+        pub_.publish(trajectory_msg);
     }
-    
+
     void App2::publish_blue_cmd(const ros::TimerEvent&)
     {
         XY v=direction_blue();
-        geometry_msgs::Twist t;
-        t.linear.x=v.x;
-        t.linear.y=v.y;
-        
-        pub_.publish(t);
+        trajectory_msgs::MultiDOFJointTrajectory trajectory_msg;
+        trajectory_msg.header.stamp = ros::Time::now();
+
+        mav_msgs::EigenTrajectoryPoint trajectory_point;
+
+        micros_swarm_framework::Base l = getRobotBase();
+
+        trajectory_point.position_W.x() = l.getX();
+        trajectory_point.position_W.y() = l.getY();
+        trajectory_point.position_W.z() =  1.0;
+
+
+         trajectory_point.velocity_W.x() = v.x;
+         trajectory_point.velocity_W.y() = v.y;
+        //trajectory_point.velocity_W.y() = -0.5;
+
+        mav_msgs::msgMultiDofJointTrajectoryFromEigen(trajectory_point, &trajectory_msg);
+
+      //  std::cout << "blue sending command: " << v.x << ", " << v.y << std::endl;
+        pub_.publish(trajectory_msg);
     }
 
     void App2::motion_red()
@@ -182,38 +220,38 @@ namespace micros_swarm_framework{
     {
         blue_timer_ = nh_.createTimer(ros::Duration(0.1), &App2::publish_blue_cmd, this);
     }
-    
+
     void App2::baseCallback(const nav_msgs::Odometry& lmsg)
     {
         float x=lmsg.pose.pose.position.x;
         float y=lmsg.pose.pose.position.y;
-    
+
         float vx=lmsg.twist.twist.linear.x;
         float vy=lmsg.twist.twist.linear.y;
-    
+
         micros_swarm_framework::Base l(x, y, 0, vx, vy, 0);
         setRobotBase(l);
     }
-    
+
     void App2::start()
     {
+      std::cout << "starting app2" << std::endl;
         init();
-    
-        sub_ = nh_.subscribe("base_pose_ground_truth", 1000, &App2::baseCallback, this, ros::TransportHints().udp());
-        ros::Duration(5).sleep(); 
-        pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
-        
+        sub_ = nh_.subscribe("ground_truth/odometry", 1000, &App2::baseCallback, this, ros::TransportHints().udp());
+        ros::Duration(5).sleep();
+        pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>("command/trajectory", 1000);
+
         boost::function<bool()> bfred=boost::bind(&App2::red, this, getRobotID());
         boost::function<bool()> bfblue=boost::bind(&App2::blue, this, getRobotID());
-    
+
         micros_swarm_framework::Swarm red_swarm(RED_SWARM);
         red_swarm.selectSwarm(bfred);
         micros_swarm_framework::Swarm blue_swarm(BLUE_SWARM);
         blue_swarm.selectSwarm(bfblue);
-        
+
         red_swarm.execute(boost::bind(&App2::motion_red, this));
         blue_swarm.execute(boost::bind(&App2::motion_blue, this));
-        
+
         red_swarm.printSwarm();
         blue_swarm.printSwarm();
     }

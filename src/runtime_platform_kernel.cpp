@@ -134,7 +134,6 @@ namespace micros_swarm_framework{
         int robot_id=rtp_->getRobotID();
         
         Base l=rtp_->getRobotBase();  //TODO
-        
         SingleRobotBroadcastBase srbb(robot_id, l.getX(), l.getY(), l.getZ(), l.getVX(), l.getVY(), l.getVZ());
         
         std::ostringstream archiveStream;

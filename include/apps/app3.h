@@ -34,29 +34,32 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #include "std_msgs/String.h"
 #include "nav_msgs/Odometry.h"
 #include "geometry_msgs/Twist.h"
+#include "trajectory_msgs/MultiDOFJointTrajectory.h"
+
+#include "mav_msgs/conversions.h"
 
 #include "micros_swarm_framework/micros_swarm_framework.h"
 
 namespace micros_swarm_framework{
-    
+
     class App3 : public Application
     {
         public:
             ros::Timer timer_;
             ros::Publisher pub_;
             ros::Subscriber sub_;
-            
+
             int hz;
             double interval;
-            
+
             App3(ros::NodeHandle nh);
             ~App3();
             virtual void start();
-            
+
             //app functions
             void init();
             void publish_cmd(const ros::TimerEvent&);
-            void baseCallback(const nav_msgs::Odometry& lmsg);  
+            void baseCallback(const nav_msgs::Odometry& lmsg);
     };
 };
 

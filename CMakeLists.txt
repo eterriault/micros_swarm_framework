@@ -52,6 +52,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   nav_msgs
+  mav_msgs
   geometry_msgs
   message_generation
 )
@@ -163,7 +164,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES micros_swarm_framework
-  CATKIN_DEPENDS roscpp rospy std_msgs nav_msgs geometry_msgs message_runtime
+  CATKIN_DEPENDS roscpp rospy std_msgs nav_msgs  geometry_msgs message_runtime
   DEPENDS system_lib
 )
 

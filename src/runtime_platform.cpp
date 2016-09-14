@@ -173,7 +173,7 @@ namespace micros_swarm_framework{
     {
         boost::upgrade_lock<boost::shared_mutex> lock(mutex6_);
         std::map<int, bool>::iterator s_it=swarms_.find(swarm_id);
-    
+
         if(s_it!=swarms_.end())
         {
             boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
@@ -224,12 +224,14 @@ namespace micros_swarm_framework{
         std::map<int, bool>::iterator s_it;
         
         boost::shared_lock<boost::shared_mutex> lock(mutex6_);
+        std::cout << "printing swarm with " << swarms_.size() << "robots" << std::endl;
         for(s_it=swarms_.begin();s_it!=swarms_.end();s_it++)
         {
             std::cout<<s_it->first<<": ";
             std::cout<<s_it->second;
             std::cout<<std::endl;
         }
+
     }
     
     bool RuntimePlatform::inNeighborSwarm(int robot_id, int swarm_id)
@@ -317,7 +319,6 @@ namespace micros_swarm_framework{
         std::map<int, NeighborSwarmTuple>::iterator os_it;
         boost::upgrade_lock<boost::shared_mutex> lock(mutex7_);
         os_it=neighbor_swarms_.find(robot_id);
-    
         if(os_it!=neighbor_swarms_.end())
         {
             NeighborSwarmTuple new_neighbor_swarm(swarm_list, 0);
@@ -336,12 +337,14 @@ namespace micros_swarm_framework{
     {
         std::map<int, NeighborSwarmTuple>::iterator os_it;
         swarm_members.clear();
-        
         boost::shared_lock<boost::shared_mutex> lock(mutex7_);
         for(os_it=neighbor_swarms_.begin(); os_it!=neighbor_swarms_.end(); os_it++)
         {
             if(os_it->second.swarmIDExist(swarm_id))
+            {
                 swarm_members.insert(os_it->first);
+            }
+
         }
     }
     

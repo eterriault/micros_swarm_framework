@@ -19,6 +19,9 @@
 #include "std_msgs/String.h"
 #include "nav_msgs/Odometry.h"
 #include <std_msgs/Float32.h>
+#include "trajectory_msgs/MultiDOFJointTrajectory.h"
+
+#include "mav_msgs/conversions.h"
 
 #include "micros_swarm_framework/micros_swarm_framework.h"
 

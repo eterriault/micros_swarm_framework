@@ -99,9 +99,9 @@ namespace micros_swarm_framework{
             case SINGLE_ROBOT_BROADCAST_BASE:{
                 //std::cout<<"SINGLE_ROBOT_BROADCAST_ID"<<std::endl;
                 micros_swarm_framework::SingleRobotBroadcastBase srbb;
-                
                 archive>>srbb;
                 
+                //std::cout << archiveStream.str() << std::endl;
                 int robot_id=srbb.getRobotID();
                 float distance=0;
                 float azimuth=0;
@@ -113,8 +113,11 @@ namespace micros_swarm_framework{
                 float vy=srbb.getRobotVY();
                 float vz=srbb.getRobotVZ();
                 
-                if((x+y+z+vx+vy+vz)==0)  //ignore the default Base value  TODO...
-                    return;
+                if((x+y+z+vx+vy+vz)==0)
+                {
+                	//return;
+                }//ignore the default Base value  TODO...
+
                 
                 Base self=rtp->getRobotBase();
                 Base neighbor(x, y, z, vx, vy, vz);
@@ -135,10 +138,11 @@ namespace micros_swarm_framework{
                 break;
             }
             case SINGLE_ROBOT_JOIN_SWARM:{
+                //std::cout<<"SINGLE_ROBOT_JOIN_SWARM"<<std::endl;
+
                 if(!rtp->inNeighbors(packet_source))
                     return;
                 
-                //std::cout<<"SINGLE_ROBOT_JOIN_SWARM"<<std::endl;
                 SingleRobotJoinSwarm srjs;
                 archive>>srjs;
              
@@ -216,13 +220,13 @@ namespace micros_swarm_framework{
             }
             case SINGLE_ROBOT_SWARM_LIST:
             {
-                if(!rtp->inNeighbors(packet_source))
-                    return;
+                if(!rtp->inNeighbors(packet_source))return;
+
                 
                 //std::cout<<"SINGLE_ROBOT_SWARM_LIST"<<std::endl;
                 SingleRobotSwarmList srsl;
                 archive>>srsl;
-                
+
                 rtp->insertOrRefreshNeighborSwarm(srsl.getRobotID(), srsl.getSwarmList());
                 
                 break;

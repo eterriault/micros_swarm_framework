@@ -1,6 +1,6 @@
 /**
 Software License Agreement (BSD)
-\file      app1.cpp 
+\file      app1.cpp
 \authors Xuefeng Chang <changxuefengcn@163.com>
 \copyright Copyright (c) 2016, the micROS Team, HPCL (National University of Defense Technology), All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that
@@ -33,18 +33,18 @@ namespace micros_swarm_framework{
     App1::App1(ros::NodeHandle nh):Application(nh)
     {
     }
-    
+
     App1::~App1()
     {
     }
-    
+
     void App1::init()
     {
         //set parameters
-        delta = 4;
-        epsilon = 100;
+        delta = 3;
+        epsilon = 10;
     }
-    
+
     float App1::force_mag(float dist)
     {
         return -(epsilon/(dist+0.1)) *(pow(delta/(dist+0.1), 4) - pow(delta/(dist+0.1), 2));
@@ -55,18 +55,18 @@ namespace micros_swarm_framework{
         micros_swarm_framework::Base l=getRobotBase();
         float xl=l.getX();
         float yl=l.getY();
-    
+
         float xn=n.getX();
         float yn=n.getY();
-    
+
         float dist=sqrt(pow((xl-xn),2)+pow((yl-yn),2));
-     
+
         float fm = force_mag(dist)/1000;
         if(fm>0.5) fm=0.5;
-    
+
         float fx=(fm/(dist+0.1))*(xn-xl);
         float fy=(fm/(dist+0.1))*(yn-yl);
-    
+
         s.x+=fx;
         s.y+=fy;
         return s;
@@ -77,50 +77,63 @@ namespace micros_swarm_framework{
         XY sum;
         sum.x=0;
         sum.y=0;
-    
+
         micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> n(true);
         boost::function<XY(NeighborBase, XY &)> bf=boost::bind(&App1::force_sum, this, _1, _2);
         sum=n.neighborsReduce(bf, sum);
-    
+
         return sum;
     }
-    
+
     void App1::publish_cmd(const ros::TimerEvent&)
     {
         XY v=direction();
-        geometry_msgs::Twist t;
-        t.linear.x=v.x;
-        t.linear.y=v.y;
+
+        trajectory_msgs::MultiDOFJointTrajectory trajectory_msg;
+        trajectory_msg.header.stamp = ros::Time::now();
+
+        mav_msgs::EigenTrajectoryPoint trajectory_point;
+
+        micros_swarm_framework::Base l = getRobotBase();
+
+        trajectory_point.position_W.x() = l.getX();
+        trajectory_point.position_W.y() = l.getY();
+        trajectory_point.position_W.z() = 1.0;
         
-        pub_.publish(t);
+        trajectory_point.velocity_W.x() = v.x;
+        trajectory_point.velocity_W.y() = v.y;
+
+        mav_msgs::msgMultiDofJointTrajectoryFromEigen(trajectory_point, &trajectory_msg);
+
+
+        pub_.publish(trajectory_msg);
     }
 
     void App1::motion()
     {
         timer_ = nh_.createTimer(ros::Duration(0.1), &App1::publish_cmd, this);
     }
-    
+
     void App1::baseCallback(const nav_msgs::Odometry& lmsg)
     {
         float x=lmsg.pose.pose.position.x;
         float y=lmsg.pose.pose.position.y;
-    
+
         float vx=lmsg.twist.twist.linear.x;
         float vy=lmsg.twist.twist.linear.y;
-    
+
         micros_swarm_framework::Base l(x, y, 0, vx, vy, 0);
         setRobotBase(l);
     }
-    
+
     void App1::start()
     {
         init();
-        
-        sub_ = nh_.subscribe("base_pose_ground_truth", 1000, &App1::baseCallback, this, ros::TransportHints().udp());
+
+        sub_ = nh_.subscribe("ground_truth/odometry", 1000, &App1::baseCallback, this, ros::TransportHints().udp());
         ros::Duration(5).sleep();
-        pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
-        
+        pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>("command/trajectory", 1000);
+
         motion();
     }
 };
-
