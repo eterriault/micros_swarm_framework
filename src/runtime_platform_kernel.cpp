@@ -66,10 +66,12 @@ namespace micros_swarm_framework{
             ros::NodeHandle node_handle_;
             boost::shared_ptr<RuntimePlatform> rtp_;
             boost::shared_ptr<CommunicationInterface> communicator_;
+            boost::shared_ptr<PacketParser> parser_;
             
             ros::Timer publish_robot_base_timer_;
             ros::Timer publish_swarm_list_timer_;
             ros::Timer barrier_timer_;
+            ros::Timer spin_timer_;
             
             float publish_robot_base_duration_;
             float publish_swarm_list_duration_;
@@ -81,6 +83,7 @@ namespace micros_swarm_framework{
             ~RuntimePlatformKernel();
             virtual void onInit();
             void setParameters();
+            void spin_msg_queue();
             void publish_robot_base(const ros::TimerEvent&);
             void publish_swarm_list(const ros::TimerEvent&);
             void barrier_check(const ros::TimerEvent&);
@@ -92,6 +95,41 @@ namespace micros_swarm_framework{
     
     RuntimePlatformKernel::~RuntimePlatformKernel()
     {
+    }
+    
+    void RuntimePlatformKernel::spin_msg_queue()
+    {
+        for(;;)
+        {
+            boost::unique_lock<boost::mutex> lock(rtp_->getOutMsgQueue()->msg_queue_mutex);
+    
+            if(!rtp_->getOutMsgQueue()->baseMsgQueueEmpty())
+            {
+                communicator_->broadcast(rtp_->getOutMsgQueue()->baseMsgQueueFront());
+                rtp_->getOutMsgQueue()->popBaseMsgQueue();
+            }
+            if(!rtp_->getOutMsgQueue()->ncMsgQueueEmpty())
+            {
+                communicator_->broadcast(rtp_->getOutMsgQueue()->ncMsgQueueFront());
+                rtp_->getOutMsgQueue()->popNcMsgQueue();
+            }
+            if(!rtp_->getOutMsgQueue()->swarmMsgQueueEmpty())
+            {
+                communicator_->broadcast(rtp_->getOutMsgQueue()->swarmMsgQueueFront());
+                rtp_->getOutMsgQueue()->popSwarmMsgQueue();
+            }
+            if(!rtp_->getOutMsgQueue()->vstigMsgQueueEmpty())
+            {
+                communicator_->broadcast(rtp_->getOutMsgQueue()->vstigMsgQueueFront());
+                rtp_->getOutMsgQueue()->popVstigMsgQueue();
+            }
+            
+            while(rtp_->getOutMsgQueue()->baseMsgQueueEmpty()&&rtp_->getOutMsgQueue()->swarmMsgQueueEmpty()&&
+                  rtp_->getOutMsgQueue()->vstigMsgQueueEmpty()&&rtp_->getOutMsgQueue()->ncMsgQueueEmpty())
+            {
+                rtp_->getOutMsgQueue()->msg_queue_condition.wait(lock);
+            }
+        }
     }
     
     void RuntimePlatformKernel::barrier_check(const ros::TimerEvent&)
@@ -133,8 +171,14 @@ namespace micros_swarm_framework{
     {
         int robot_id=rtp_->getRobotID();
         
+<<<<<<< HEAD
         Base l=rtp_->getRobotBase();  //TODO
         SingleRobotBroadcastBase srbb(robot_id, l.getX(), l.getY(), l.getZ(), l.getVX(), l.getVY(), l.getVZ());
+=======
+        const Base& l=rtp_->getRobotBase();
+        
+        SingleRobotBroadcastBase srbb(robot_id, l.x, l.y, l.z, l.vx, l.vy, l.vz, l.valid);
+>>>>>>> upstream/master
         
         std::ostringstream archiveStream;
         boost::archive::text_oarchive archive(archiveStream);
@@ -152,8 +196,8 @@ namespace micros_swarm_framework{
         p.packet_data=srbb_str.data();
         #endif
         p.package_check_sum=0;
-
-        communicator_->broadcast(p);
+        
+        rtp_->getOutMsgQueue()->pushBaseMsgQueue(p);
     }
     
     void RuntimePlatformKernel::publish_swarm_list(const ros::TimerEvent&)
@@ -183,7 +227,7 @@ namespace micros_swarm_framework{
         #endif
         p.package_check_sum=0;
 
-        communicator_->broadcast(p);
+        rtp_->getOutMsgQueue()->pushSwarmMsgQueue(p);
     }
     
     void RuntimePlatformKernel::setParameters()
@@ -240,16 +284,23 @@ namespace micros_swarm_framework{
         
         setParameters();
     
+        //construct runtime platform
         rtp_=Singleton<RuntimePlatform>::getSingleton(robot_id_);
+        rtp_->setNeighborDistance(default_neighbor_distance_);
+        //construct communicator
         #ifdef ROS
         communicator_=Singleton<ROSCommunication>::getSingleton(node_handle_);
         #endif
         #ifdef OPENSPLICE_DDS
         communicator_=Singleton<OpenSpliceDDSCommunication>::getSingleton();
         #endif
-        communicator_->receive(packetParser);
+        //construct packet parser
+        parser_.reset(new PacketParser());
+        boost::function<void(const MSFPPacket& packet)> parser_func=boost::bind(&PacketParser::parser, parser_, _1);
+        //transfer the parser function to the communicator 
+        communicator_->receive(parser_func);
         
-        rtp_->setNeighborDistance(default_neighbor_distance_);
+        boost::thread spin_thread(&RuntimePlatformKernel::spin_msg_queue, this);
         publish_robot_base_timer_ = node_handle_.createTimer(ros::Duration(publish_robot_base_duration_), &RuntimePlatformKernel::publish_robot_base, this);
         publish_swarm_list_timer_ = node_handle_.createTimer(ros::Duration(publish_swarm_list_duration_), &RuntimePlatformKernel::publish_swarm_list, this);
         barrier_timer_=node_handle_.createTimer(ros::Duration(1), &RuntimePlatformKernel::barrier_check, this);

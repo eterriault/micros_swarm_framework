@@ -24,7 +24,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 
 namespace micros_swarm_framework{
 
-    TestNC::TestNC(ros::NodeHandle nh):Application(nh)
+    TestNC::TestNC(ros::NodeHandle node_handle):Application(node_handle)
     {
     }
     
@@ -32,19 +32,17 @@ namespace micros_swarm_framework{
     {
     }
     
-    void TestNC::callback(const std::string& value_str)
+    void TestNC::callback(const float& value)
     {
-        float value=convertToType<float>(value_str);
-        
         std::cout<<"I received the value: "<<value<<std::endl;
     }
     
     void TestNC::start()
     {
         Broadcaster<float> bc("testkey");
-        Listener ls("testkey");
-        boost::function<void(const std::string&)> cb=boost::bind(&TestNC::callback, this, _1);
-        ls.listen(cb);
+        boost::function<void(const float&)> cb=boost::bind(&TestNC::callback, this, _1);
+        Listener<float> ls("testkey", cb);
+        
         //ls.ignore();
         
         for(int i=0;i<10;i++)

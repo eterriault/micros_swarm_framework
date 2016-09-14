@@ -36,7 +36,7 @@ namespace micros_swarm_framework{
         float y;
     };
 
-    App2::App2(ros::NodeHandle nh):Application(nh)
+    App2::App2(ros::NodeHandle node_handle):Application(node_handle)
     {
 
     }
@@ -67,12 +67,13 @@ namespace micros_swarm_framework{
 
     XY App2::force_sum_kin(micros_swarm_framework::NeighborBase n, XY &s)
     {
-        micros_swarm_framework::Base l=getRobotBase();
-        float xl=l.getX();
-        float yl=l.getY();
 
-        float xn=n.getX();
-        float yn=n.getY();
+        micros_swarm_framework::Base l=base();
+        float xl=l.x;
+        float yl=l.y;
+
+        float xn=n.x;
+        float yn=n.y;
 
         float dist=sqrt(pow((xl-xn),2)+pow((yl-yn),2));
 
@@ -89,12 +90,13 @@ namespace micros_swarm_framework{
 
     XY App2::force_sum_nonkin(micros_swarm_framework::NeighborBase n, XY &s)
     {
-        micros_swarm_framework::Base l=getRobotBase();
-        float xl=l.getX();
-        float yl=l.getY();
 
-        float xn=n.getX();
-        float yn=n.getY();
+        micros_swarm_framework::Base l=base();
+        float xl=l.x;
+        float yl=l.y;
+
+        float xn=n.x;
+        float yn=n.y;
 
         float dist=sqrt(pow((xl-xn),2)+pow((yl-yn),2));
 
@@ -120,9 +122,8 @@ namespace micros_swarm_framework{
         boost::function<XY(NeighborBase, XY &)> bf_kin=boost::bind(&App2::force_sum_kin, this, _1, _2);
         boost::function<XY(NeighborBase, XY &)> bf_nonkin=boost::bind(&App2::force_sum_nonkin, this, _1, _2);
 
-        sum=n.neighborsKin(RED_SWARM).neighborsReduce(bf_kin, sum);
-        sum=n.neighborsNonKin(RED_SWARM).neighborsReduce(bf_nonkin, sum);
-
+        sum=n.kin(RED_SWARM).reduce(bf_kin, sum);
+        sum=n.nonkin(RED_SWARM).reduce(bf_nonkin, sum);
 
         return sum;
     }
@@ -136,9 +137,9 @@ namespace micros_swarm_framework{
         micros_swarm_framework::Neighbors<micros_swarm_framework::NeighborBase> n(true);
         boost::function<XY(NeighborBase, XY &)> bf_kin=boost::bind(&App2::force_sum_kin, this, _1, _2);
         boost::function<XY(NeighborBase, XY &)> bf_nonkin=boost::bind(&App2::force_sum_nonkin, this, _1, _2);
-        sum=n.neighborsKin(BLUE_SWARM).neighborsReduce(bf_kin, sum);
-        sum=n.neighborsNonKin(BLUE_SWARM).neighborsReduce(bf_nonkin, sum);
 
+        sum=n.kin(BLUE_SWARM).reduce(bf_kin, sum);
+        sum=n.nonkin(BLUE_SWARM).reduce(bf_nonkin, sum);
 
         return sum;
     }
@@ -184,6 +185,7 @@ namespace micros_swarm_framework{
 
 
         pub_.publish(trajectory_msg);
+
     }
 
     void App2::publish_blue_cmd(const ros::TimerEvent&)
@@ -209,16 +211,17 @@ namespace micros_swarm_framework{
 
       //  std::cout << "blue sending command: " << v.x << ", " << v.y << std::endl;
         pub_.publish(trajectory_msg);
+
     }
 
     void App2::motion_red()
     {
-        red_timer_ = nh_.createTimer(ros::Duration(0.1), &App2::publish_red_cmd, this);
+        red_timer = nh.createTimer(ros::Duration(0.1), &App2::publish_red_cmd, this);
     }
 
     void App2::motion_blue()
     {
-        blue_timer_ = nh_.createTimer(ros::Duration(0.1), &App2::publish_blue_cmd, this);
+        blue_timer = nh.createTimer(ros::Duration(0.1), &App2::publish_blue_cmd, this);
     }
 
     void App2::baseCallback(const nav_msgs::Odometry& lmsg)
@@ -230,29 +233,34 @@ namespace micros_swarm_framework{
         float vy=lmsg.twist.twist.linear.y;
 
         micros_swarm_framework::Base l(x, y, 0, vx, vy, 0);
-        setRobotBase(l);
+        set_base(l);
     }
 
     void App2::start()
     {
       std::cout << "starting app2" << std::endl;
         init();
-        sub_ = nh_.subscribe("ground_truth/odometry", 1000, &App2::baseCallback, this, ros::TransportHints().udp());
-        ros::Duration(5).sleep();
-        pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>("command/trajectory", 1000);
 
-        boost::function<bool()> bfred=boost::bind(&App2::red, this, getRobotID());
-        boost::function<bool()> bfblue=boost::bind(&App2::blue, this, getRobotID());
+pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>("command/trajectory", 1000);
+
+        sub_ = nh_.subscribe("ground_truth/odometry", 1000, &App2::baseCallback, this, ros::TransportHints().udp());
+        ros::Duration(5).sleep();  //this is necessary, in order that the runtime platform kernel of the robot has enough time to publish it's base information.
+
+        boost::function<bool()> bfred=boost::bind(&App2::red, this, robot_id());
+        boost::function<bool()> bfblue=boost::bind(&App2::blue, this, robot_id());
+
 
         micros_swarm_framework::Swarm red_swarm(RED_SWARM);
-        red_swarm.selectSwarm(bfred);
+        red_swarm.select(bfred);
         micros_swarm_framework::Swarm blue_swarm(BLUE_SWARM);
-        blue_swarm.selectSwarm(bfblue);
+
+        blue_swarm.select(bfblue);
 
         red_swarm.execute(boost::bind(&App2::motion_red, this));
         blue_swarm.execute(boost::bind(&App2::motion_blue, this));
 
-        red_swarm.printSwarm();
-        blue_swarm.printSwarm();
+        red_swarm.print();
+        blue_swarm.print();
+
     }
 };

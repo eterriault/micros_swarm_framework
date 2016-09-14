@@ -46,26 +46,28 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 namespace micros_swarm_framework{
     
     class OpenSpliceDDSCommunication : public CommunicationInterface{
-        private:
-            boost::shared_ptr<micros_swarm_framework::Publisher> packet_publisher_;
-            boost::shared_ptr<micros_swarm_framework::Subscriber> packet_subscriber_;
         public:
             OpenSpliceDDSCommunication()
             {
                 name_="OPENSPLICE_DDS";
                 packet_publisher_.reset(new micros_swarm_framework::Publisher("micros_swarm_framework_topic"));
+                packet_subscriber_.reset(new micros_swarm_framework::Subscriber("micros_swarm_framework_topic"));
             }
             
-            void broadcast(micros_swarm_framework::MSFPPacket msfp_packet)
+            void broadcast(const MSFPPacket& msfp_packet)
             {
                 packet_publisher_->publish(msfp_packet); 
             }
             
-            void receive(void (*callback)(const MSFPPacket& packet))
+            void receive(boost::function<void(const MSFPPacket&)> parser)
             {
-                packet_subscriber_.reset(new micros_swarm_framework::Subscriber("micros_swarm_framework_topic"));
-                packet_subscriber_->subscribe(callback);
+                parser_=parser;
+                packet_subscriber_->subscribe(parser_);
             }
+            
+        private:
+            boost::shared_ptr<micros_swarm_framework::Publisher> packet_publisher_;
+            boost::shared_ptr<micros_swarm_framework::Subscriber> packet_subscriber_;
     };
 };
 #endif

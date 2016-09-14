@@ -50,25 +50,12 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #endif
 
 #include "micros_swarm_framework/data_type.h"
+#include "micros_swarm_framework/listener_helper.h"
+#include "micros_swarm_framework/msg_queue_manager.h"
 
 namespace micros_swarm_framework{
 
     class  RuntimePlatform{
-        private:
-            int robot_id_;
-            int robot_type_;  //TODO
-            int robot_status_;  //TODO
-            Base robot_base_;
-            std::map<int, NeighborBase> neighbors_;
-            std::map<int, bool> swarms_;
-            std::map<int, NeighborSwarmTuple> neighbor_swarms_;
-            std::map<int, std::map<std::string, VirtualStigmergyTuple> > virtual_stigmergy_;
-            float neighbor_distance_;
-            std::set<int> barrier_;
-            std::map<std::string, boost::function<void(const std::string&)> > callback_functions_;
-            boost::shared_mutex mutex1_, mutex2_, mutex3_, mutex4_, mutex5_,
-                                mutex6_, mutex7_, mutex8_, mutex9_, mutex10_,
-                                mutex11_;
         public:
             RuntimePlatform();
             RuntimePlatform(int robot_id);
@@ -112,7 +99,7 @@ namespace micros_swarm_framework{
             void printNeighborSwarm();
             
             void createVirtualStigmergy(int id);
-            void insertOrUpdateVirtualStigmergy(int id, const std::string& key, const std::string& value, time_t time_now, int robot_id);
+            void insertOrUpdateVirtualStigmergy(int id, const std::string& key, const std::string& value, const time_t& time_now, int robot_id);
             void getVirtualStigmergyTuple(int id, const std::string& key, VirtualStigmergyTuple& vstig_tuple);
             int getVirtualStigmergySize(int id);
             void deleteVirtualStigmergy(int id);
@@ -122,13 +109,34 @@ namespace micros_swarm_framework{
             float getNeighborDistance();
             void setNeighborDistance(float neighbor_distance);
             
+            void insertOrUpdateListenerHelper(const std::string& key, const boost::shared_ptr<ListenerHelper> helper);
+            const boost::shared_ptr<ListenerHelper> getListenerHelper(const std::string& key);
+            void deleteListenerHelper(const std::string& key);
+            
+            const boost::shared_ptr<MsgQueueManager>& getOutMsgQueue();
+            const boost::shared_ptr<MsgQueueManager>& getInMsgQueue();
+            
             void insertBarrier(int robot_id);
             int getBarrierSize();
+        private:
+            int robot_id_;
+            int robot_type_;  //TODO
+            int robot_status_;  //TODO
+            Base robot_base_;
+            std::map<int, NeighborBase> neighbors_;
+            std::map<int, bool> swarms_;
+            std::map<int, NeighborSwarmTuple> neighbor_swarms_;
+            std::map<int, std::map<std::string, VirtualStigmergyTuple> > virtual_stigmergy_;
+            float neighbor_distance_;
+            std::map<std::string, boost::shared_ptr<ListenerHelper> > listener_helpers_;
+            std::set<int> barrier_;
             
-            void insertOrUpdateCallbackFunctions(std::string key, const boost::function<void(const std::string&)>& cb);
-            void doNothing(const std::string& value_str);
-            const boost::function<void(const std::string&)>& getCallbackFunctions(const std::string& key);
-            void deleteCallbackFunctions(const std::string& key);
+            boost::shared_ptr<MsgQueueManager> out_msg_queue_;
+            boost::shared_ptr<MsgQueueManager> in_msg_queue_;
+            
+            boost::shared_mutex mutex1_, mutex2_, mutex3_, mutex4_, mutex5_,
+                                mutex6_, mutex7_, mutex8_, mutex9_, mutex10_,
+                                mutex11_;
     };
 };
 

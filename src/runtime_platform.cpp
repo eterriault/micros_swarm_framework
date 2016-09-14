@@ -47,10 +47,11 @@ namespace micros_swarm_framework{
         swarms_.clear();
         neighbor_swarms_.clear();
         virtual_stigmergy_.clear();
+        listener_helpers_.clear();
+        listener_helpers_.insert(std::pair<std::string, boost::shared_ptr<ListenerHelper> >("" , NULL));
+        in_msg_queue_.reset(new MsgQueueManager());
+        out_msg_queue_.reset(new MsgQueueManager());
         barrier_.clear();
-        callback_functions_.clear();
-        boost::function<void(const std::string&)> f=boost::bind(&RuntimePlatform::doNothing, this, _1);
-        callback_functions_.insert(std::pair<std::string, boost::function<void(const std::string&)> >("" ,f));
     }
     
     int RuntimePlatform::getRobotID()
@@ -99,14 +100,17 @@ namespace micros_swarm_framework{
     {
         boost::unique_lock<boost::shared_mutex> lock(mutex4_);
         robot_base_=robot_base;
-    }
+        
+        if(robot_base.valid==-1)
+            robot_base_.valid=1;
+    }    
     
     void RuntimePlatform::printRobotBase()
     {
         boost::shared_lock<boost::shared_mutex> lock(mutex4_);
-        std::cout<<"robot base: "<<robot_base_.getX()<<", "<<robot_base_.getY()<<", "<<\
-            robot_base_.getZ()<<", "<<robot_base_.getVX()<<", "<<robot_base_.getVY()<<", "<<\
-            robot_base_.getVZ()<<std::endl;
+        std::cout<<"robot base: "<<robot_base_.x<<", "<<robot_base_.y<<", "<<\
+            robot_base_.z<<", "<<robot_base_.vx<<", "<<robot_base_.vy<<", "<<\
+            robot_base_.vz<<std::endl;
     }
         
     void RuntimePlatform::getNeighbors(std::map<int, NeighborBase>& neighbors)
@@ -162,9 +166,9 @@ namespace micros_swarm_framework{
         {
             std::cout<<n_it->first<<": ";
             
-            std::cout<<n_it->second.getDistance()<<","<<n_it->second.getAzimuth()<<","<<n_it->second.getElevation()<<","<<\
-                n_it->second.getX()<<","<<n_it->second.getY()<<","<<n_it->second.getZ()<<", "<<
-                n_it->second.getVX()<<","<<n_it->second.getVY()<<","<<n_it->second.getVZ();
+            std::cout<<n_it->second.distance<<","<<n_it->second.azimuth<<","<<n_it->second.elevation<<","<<\
+                n_it->second.x<<","<<n_it->second.y<<","<<n_it->second.z<<", "<<
+                n_it->second.vx<<","<<n_it->second.vy<<","<<n_it->second.vz;
             std::cout<<std::endl;
         }
     }
@@ -268,13 +272,13 @@ namespace micros_swarm_framework{
             if(os_it->second.swarmIDExist(swarm_id))
             {
                 boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
-                os_it->second.setAge(0);
+                os_it->second.age=0;
             }
             else
             {           
                 boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
                 os_it->second.addSwarmID(swarm_id);
-                os_it->second.setAge(0);
+                os_it->second.age=0;
             }
         }
         else
@@ -300,7 +304,7 @@ namespace micros_swarm_framework{
             {
                 boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
                 os_it->second.removeSwarmID(swarm_id);
-                os_it->second.setAge(0);
+                os_it->second.age=0;
             }
             else
             {
@@ -363,12 +367,12 @@ namespace micros_swarm_framework{
         {
             std::cout<<"neighbor swarm "<<os_it->first<<": ";
             
-            std::vector<int> temp=os_it->second.getSwarmIDVector();
+            std::vector<int> temp=os_it->second.swarm_id_vector;
             for(int i=0;i<temp.size();i++)
             {
                 std::cout<<temp[i]<<",";
             }
-            std::cout<<"age: "<<os_it->second.getAge();
+            std::cout<<"age: "<<os_it->second.age;
             std::cout<<std::endl;
         }
     }
@@ -391,7 +395,7 @@ namespace micros_swarm_framework{
         }
     }
     
-    void RuntimePlatform::insertOrUpdateVirtualStigmergy(int id, const std::string& key, const std::string& value, time_t time_now, int robot_id)
+    void RuntimePlatform::insertOrUpdateVirtualStigmergy(int id, const std::string& key, const std::string& value, const time_t& time_now, int robot_id)
     {
         std::map<int, std::map<std::string, VirtualStigmergyTuple> >::iterator vst_it;
         boost::upgrade_lock<boost::shared_mutex> lock(mutex8_);
@@ -496,8 +500,8 @@ namespace micros_swarm_framework{
             for (svstt_it=svstt_pointer->begin(); svstt_it!=svstt_pointer->end(); svstt_it++)
             {
                 std::cout<<"("<<svstt_it->first<<","<< \
-                    svstt_it->second.getVirtualStigmergyValue()<<","<<svstt_it->second.getVirtualStigmergyTimestamp()<<","<<\
-                    svstt_it->second.getRobotID()<<")"<<std::endl;
+                    svstt_it->second.vstig_value<<","<<svstt_it->second.vstig_timestamp<<","<<\
+                    svstt_it->second.robot_id<<")"<<std::endl;
             }
             std::cout<<"]"<<std::endl;
             std::cout<<std::endl;
@@ -516,60 +520,64 @@ namespace micros_swarm_framework{
         neighbor_distance_=neighbor_distance;
     }
     
-    void RuntimePlatform::insertBarrier(int robot_id)
+    void RuntimePlatform::insertOrUpdateListenerHelper(const std::string& key, const boost::shared_ptr<ListenerHelper> helper)
+    {
+        std::map<std::string, boost::shared_ptr<ListenerHelper> >::iterator lh_it;
+        boost::upgrade_lock<boost::shared_mutex> lock(mutex10_);
+        lh_it=listener_helpers_.find(key);
+    
+        if(lh_it!=listener_helpers_.end())
+        {
+            boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
+            lh_it->second = helper;
+        }
+        else
+        {
+            boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
+            listener_helpers_.insert(std::pair<std::string, boost::shared_ptr<ListenerHelper> >(key ,helper));
+        } 
+    }
+    
+    const boost::shared_ptr<ListenerHelper> RuntimePlatform::getListenerHelper(const std::string& key)
+    {
+        std::map<std::string, boost::shared_ptr<ListenerHelper> >::iterator lh_it;
+        boost::shared_lock<boost::shared_mutex> lock(mutex10_);
+        lh_it=listener_helpers_.find(key);
+    
+        if(lh_it!=listener_helpers_.end())
+        {
+            return lh_it->second;
+        }
+        
+        std::cout<<"could not get the callback function which has the key "<<key<<"!"<<std::endl;
+        return NULL;
+    }
+    
+    void RuntimePlatform::deleteListenerHelper(const std::string& key)
     {
         boost::unique_lock<boost::shared_mutex> lock(mutex10_);
+        listener_helpers_.erase(key);
+    }
+    
+    const boost::shared_ptr<MsgQueueManager>& RuntimePlatform::getOutMsgQueue()
+    {
+        return out_msg_queue_;
+    }
+    
+    const boost::shared_ptr<MsgQueueManager>& RuntimePlatform::getInMsgQueue()
+    {
+        return in_msg_queue_;
+    }
+    
+    void RuntimePlatform::insertBarrier(int robot_id)
+    {
+        boost::unique_lock<boost::shared_mutex> lock(mutex11_);
         barrier_.insert(robot_id);
     }
     
     int RuntimePlatform::getBarrierSize()
     {
-        boost::shared_lock<boost::shared_mutex> lock(mutex10_);
-        return barrier_.size();
-    }
-    
-    void RuntimePlatform::insertOrUpdateCallbackFunctions(std::string key, const boost::function<void(const std::string&)>& cb)
-    {
-        std::map<std::string, boost::function<void(const std::string&)> >::iterator nccb_it;
-        boost::upgrade_lock<boost::shared_mutex> lock(mutex11_);
-        nccb_it=callback_functions_.find(key);
-    
-        if(nccb_it!=callback_functions_.end())
-        {
-            boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
-            nccb_it->second = cb;
-        }
-        else
-        {
-            boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
-            callback_functions_.insert(std::pair<std::string, boost::function<void(const std::string&)> >(key ,cb));
-        } 
-    }
-    
-    void RuntimePlatform::doNothing(const std::string& value_str)
-    {
-        
-    }
-    
-    const boost::function<void(const std::string&)>& RuntimePlatform::getCallbackFunctions(const std::string& key)
-    {
-        std::map<std::string, boost::function<void(const std::string&)> >::iterator nccb_it;
         boost::shared_lock<boost::shared_mutex> lock(mutex11_);
-        nccb_it=callback_functions_.find(key);
-    
-        if(nccb_it!=callback_functions_.end())
-        {
-            return nccb_it->second;
-        }
-        
-        std::cout<<"could not get the callback function which has the key "<<key<<"!"<<std::endl;
-        nccb_it=callback_functions_.find("");
-        return nccb_it->second;
-    }
-    
-    void RuntimePlatform::deleteCallbackFunctions(const std::string& key)
-    {
-        boost::unique_lock<boost::shared_mutex> lock(mutex11_);
-        callback_functions_.erase(key);
+        return barrier_.size();
     }
 };

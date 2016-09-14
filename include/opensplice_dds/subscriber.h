@@ -25,6 +25,8 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 
 #include <iostream>
 #include <string.h>
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
 #include "ccpp_dds_dcps.h"
 #include "check_status.h"
 #include "ccpp_MSFPPacket.h"
@@ -36,12 +38,15 @@ using namespace DDS;
 namespace micros_swarm_framework{
     class Subscriber
     {
+        public:
+            Subscriber(const std::string& topic_name);
+            void subscribe(void (*callBack)(const MSFPPacket& packet));
+            void subscribe(boost::function<void(const MSFPPacket&)> callBack);
+            ~Subscriber();
         private:
             DomainId_t  domain;
             ReturnCode_t  status;
-            
             const char *topic_name_;
-            
             char  *MSFPPacketTypeName;
             
             //Generic DDS entities
@@ -58,10 +63,6 @@ namespace micros_swarm_framework{
             TopicQos  topic_qos;
             SubscriberQos  sub_qos;
             DataReaderQos  dr_qos;
-        public:
-            Subscriber(std::string topic_name);
-            void subscribe(void (*callBack)(const MSFPPacket& packet));
-            ~Subscriber();
     };
 };
 

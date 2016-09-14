@@ -34,7 +34,7 @@ using namespace DDS;
 
 namespace micros_swarm_framework{
     
-    Subscriber::Subscriber(std::string topic_name)
+    Subscriber::Subscriber(const std::string& topic_name)
     {
         domain = 0;
         topic_name_ = topic_name.data();
@@ -49,7 +49,7 @@ namespace micros_swarm_framework{
             NULL,
             STATUS_MASK_NONE);
         checkHandle(participant, "DDS::DomainParticipantFactory::create_participant");
-
+        
         //Register the required datatype for MSFPPacket
         MSFPPacketTS = new MSFPPacketTypeSupport();
         checkHandle(MSFPPacketTS.in(), "new MSFPPacketTypeSupport");
@@ -63,9 +63,10 @@ namespace micros_swarm_framework{
         status = participant->get_default_topic_qos(topic_qos);
         checkStatus(status, "DDS::DomainParticipant::get_default_topic_qos");
         
-        //topic_qos.reliability.kind = DDS::BEST_EFFORT_RELIABILITY_QOS;
-        topic_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
+        topic_qos.reliability.kind = DDS::BEST_EFFORT_RELIABILITY_QOS;
+        //topic_qos.reliability.kind = RELIABLE_RELIABILITY_QOS;
         topic_qos.durability_service.history_kind=KEEP_LAST_HISTORY_QOS;
+        //topic_qos.durability_service.history_depth=4000;
 
         //Make the tailored QoS the new default
         status = participant->set_default_topic_qos(topic_qos);
@@ -113,6 +114,19 @@ namespace micros_swarm_framework{
     {
         MSFPPacketListener *myListener = new MSFPPacketListener();
         myListener->callBack_ = callBack;  //set callBack function
+        //myListener->callBack_ = boost::bind(callBack, _1);  //set callBack function
+        myListener->MSFPPacketDR_ = MSFPPacketDataReader::_narrow(MSFPPacketDR.in());
+        checkHandle(myListener->MSFPPacketDR_.in(), "MSFPPacketDataReader::_narrow");
+
+        //DDS::StatusMask mask = DDS::DATA_AVAILABLE_STATUS | DDS::REQUESTED_DEADLINE_MISSED_STATUS;
+        DDS::StatusMask mask = DDS::DATA_AVAILABLE_STATUS;
+        myListener->MSFPPacketDR_->set_listener(myListener, mask);
+    }
+    
+    void Subscriber::subscribe(boost::function<void(const MSFPPacket&)> callBack)
+    {
+        MSFPPacketListener *myListener = new MSFPPacketListener();
+        myListener->callBack_ = callBack;  //set callBack function
         myListener->MSFPPacketDR_ = MSFPPacketDataReader::_narrow(MSFPPacketDR.in());
         checkHandle(myListener->MSFPPacketDR_.in(), "MSFPPacketDataReader::_narrow");
 
@@ -123,7 +137,6 @@ namespace micros_swarm_framework{
     
     Subscriber::~Subscriber()
     {
-        
         //Remove the DataReade
         status = subscriber_->delete_datareader(MSFPPacketDR.in());
         checkStatus(status, "DDS::Subscriber::delete_datareader");
